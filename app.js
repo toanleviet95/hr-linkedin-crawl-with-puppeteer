@@ -1,14 +1,18 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
 
+require('dotenv').config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MAX_SCROLL_TIMES = 20;
 const TIMEOUT_GO_TO_PAGE = 60000;
 const TIMEOUT_TO_SLEEP_WHEN_SCROLL = 1500;
 
+// Replace with your actual Browserless WebSocket URL
+const BROWSERLESS_WS_URL = `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}`;
 
-app.use(express.json()); // for parsing application/json
+app.use(express.json());
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
