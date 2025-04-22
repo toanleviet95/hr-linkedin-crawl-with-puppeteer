@@ -36,10 +36,7 @@ app.post("/crawl-linkedin-group", async (req, res) => {
         "--no-zygote",
         "--window-size=1920,1080"
       ],
-      executablePath:
-        process.env.NODE_ENV === "production"
-          ? process.env.PUPPETEER_EXECUTABLE_PATH
-          : puppeteer.executablePath(),
+      executablePath: puppeteer.executablePath()
     });
 
     const page = await browser.newPage();
