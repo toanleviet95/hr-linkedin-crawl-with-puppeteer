@@ -29,7 +29,17 @@ app.post("/crawl-linkedin-group", async (req, res) => {
     browser = await puppeteer.launch({
       headless: false,
       slowMo: 10,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", '--window-size=1920,1080'],
+      args: [
+        "--disable-setuid-sandbox",
+        "--no-sandbox",
+        "--single-process",
+        "--no-zygote",
+        "--window-size=1920,1080"
+      ],
+      executablePath:
+        process.env.NODE_ENV === "production"
+          ? process.env.PUPPETEER_EXECUTABLE_PATH
+          : puppeteer.executablePath(),
     });
 
     const page = await browser.newPage();
