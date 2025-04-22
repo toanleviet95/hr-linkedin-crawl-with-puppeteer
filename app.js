@@ -36,7 +36,6 @@ app.post("/crawl-linkedin-group", async (req, res) => {
         "--no-zygote",
         "--window-size=1920,1080"
       ],
-      executablePath: puppeteer.executablePath()
     });
 
     const page = await browser.newPage();
