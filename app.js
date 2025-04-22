@@ -1,5 +1,6 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
+const { createClient } = require('@supabase/supabase-js');
 
 require('dotenv').config();
 
@@ -9,8 +10,10 @@ const MAX_SCROLL_TIMES = 20;
 const TIMEOUT_GO_TO_PAGE = 60000;
 const TIMEOUT_TO_SLEEP_WHEN_SCROLL = 1500;
 
-// Replace with your actual Browserless WebSocket URL
-const BROWSERLESS_WS_URL = `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}`;
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 app.use(express.json());
 
@@ -81,11 +84,57 @@ app.post("/crawl-linkedin-group", async (req, res) => {
         const author = post.querySelector("span.update-components-actor__title span.visually-hidden");
 
         return {
-          author: author?.innerText?.trim() || "Unknown",
-          text: content?.innerText?.trim() || "No content",
+          author: author?.innerText?.trim() || "",
+          content: content?.innerText?.trim() || "",
         };
       });
     });
+    
+    if (posts.length === 0) {
+      return res.status(404).json({ error: "No posts found" });
+    }
+    
+    const ONE_HOUR_IN_MS = 60 * 60 * 1000;
+
+    for (const post of posts) {
+      // Check if this author has posted in the last 60 minutes
+      const { data: recentPosts, error } = await supabase
+        .from("posts")
+        .select("created_at")
+        .eq("author", post.author)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error("❌ Error checking existing posts:", error);
+        continue;
+      }
+
+      if (recentPosts.length > 0) {
+        const lastPostTime = new Date(recentPosts[0].created_at).getTime();
+        const now = Date.now();
+        const diffMs = now - lastPostTime;
+
+        if (diffMs < ONE_HOUR_IN_MS) {
+          console.log(`⏭️ Skipping: ${post.author} posted ${Math.floor(diffMs / 60000)} minutes ago`);
+          continue; // Skip inserting
+        }
+      }
+
+      // Insert the post
+      const { error: insertError } = await supabase
+        .from("posts")
+        .insert({
+          author: post.author,
+          content: post.content
+        });
+
+      if (insertError) {
+        res.status(500).json({ error: "Something went wrong", detail: "Insert error: " + insertError });
+      } else {
+        console.log(`✅ Inserted post by ${post.author}`);
+      }
+    }
 
     res.json({ success: true, posts });
 
